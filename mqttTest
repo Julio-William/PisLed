@@ -1,0 +1,73 @@
+#include <WiFi.h>
+#include <PubSubClient.h>
+
+
+// Definir suas credenciais Wi-Fi
+const char* ssid = "*******";
+const char* password = "******";
+const int ledPin0 = 0;
+const int ledPin2 = 2;
+const int ledPin4 = 4;
+// Definir o servidor MQTT (no caso, o broker Mosquitto)
+const char* mqtt_server = "127.0.0.1";  // Ou o IP do servidor Mosquitto
+
+WiFiClient espClient;
+PubSubClient client(espClient);
+
+void setup() {
+  Serial.begin(115200);
+  
+  // Conectar ao Wi-Fi
+  setup_wifi();
+  
+  // Conectar ao MQTT
+  client.setServer(mqtt_server, 1883);
+
+  pinMode(ledPin0, OUTPUT);
+  pinMode(ledPin2, OUTPUT);
+  pinMode(ledPin4, OUTPUT);
+}
+
+void loop() {
+  if (!client.connected()) {
+    digitalWrite(ledPin0, LOW);
+    reconnect();
+  }
+  client.loop();
+  
+  // Enviar dados para o tópico MQTT
+  String message = "Temperatura: 25°C";
+  client.publish("sensor/temperatura", message.c_str());
+  digitalWrite(ledPin0, HIGH);
+  delay(2000);  // Enviar a cada 2 segundos
+}
+
+void setup_wifi() {
+  delay(10);
+  // Conectar à rede Wi-Fi
+  WiFi.begin(ssid, password);
+  while (WiFi.status() != WL_CONNECTED) {
+    delay(1000);
+    Serial.println("Conectando ao WiFi...");
+  }
+  Serial.println("Conectado ao WiFi");
+  digitalWrite(ledPin2, HIGH);
+  digitalWrite(ledPin4, LOW);
+}
+
+void reconnect() {
+  while (!client.connected()) {
+    Serial.print("Tentando reconectar ao MQTT...");
+    digitalWrite(ledPin2, LOW);
+    
+    // Tentar reconectar
+    if (client.connect("ESP32Client")) {
+      Serial.println("Conectado ao MQTT");
+    } else {
+      Serial.print("Falha. Código de erro: ");
+      Serial.print(client.state());
+      digitalWrite(ledPin4, HIGH);
+      delay(5000);
+    }
+  }
+}
